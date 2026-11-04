@@ -32,3 +32,33 @@ output "network_interface_id" {
   description = "The resource ID of the VM network interface"
   value       = azurerm_network_interface.main.id
 }
+
+output "vm_id" {
+  description = "The resource ID of the Azure Linux Virtual Machine"
+  value       = azurerm_linux_virtual_machine.main.id
+}
+
+output "vm_name" {
+  description = "The hostname and resource name of the Virtual Machine"
+  value       = azurerm_linux_virtual_machine.main.name
+}
+
+output "vm_private_ip" {
+  description = "The private IPv4 address assigned to the Virtual Machine"
+  value       = azurerm_linux_virtual_machine.main.private_ip_address
+}
+
+output "ssh_private_key_file" {
+  description = "Path to the locally generated SSH private key (.pem)"
+  value       = local_file.private_key.filename
+}
+
+output "ssh_command" {
+  description = "Ready-to-use SSH connection command"
+  value       = "ssh -i ${local_file.private_key.filename} ${var.admin_username}@${azurerm_public_ip.main.ip_address}"
+}
+
+output "cloud_init_status_command" {
+  description = "Command to verify cloud-init bootstrap progress on the VM"
+  value       = "ssh -i ${local_file.private_key.filename} ${var.admin_username}@${azurerm_public_ip.main.ip_address} 'sudo cat /var/log/cloud-init-output.log'"
+}

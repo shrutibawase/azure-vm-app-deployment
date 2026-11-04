@@ -11,6 +11,11 @@ resource "azurerm_linux_virtual_machine" "main" {
 
   disable_password_authentication = true
 
+  admin_ssh_key {
+    username   = var.admin_username
+    public_key = tls_private_key.vm_ssh.public_key_openssh
+  }
+
   os_disk {
     name                 = "osdisk-${local.naming_prefix}"
     caching              = "ReadWrite"

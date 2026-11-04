@@ -1,6 +1,6 @@
-# 🛠 Terraform Azure Network & Foundation Module
+# 🛠 Terraform Azure Network, Compute & Foundation Module
 
-This module provisions the baseline networking foundation on Microsoft Azure required to host a secure Virtual Machine.
+This module provisions the enterprise networking and compute foundation on Microsoft Azure required to host secure, containerized workloads.
 
 ---
 
@@ -13,6 +13,8 @@ This module provisions the baseline networking foundation on Microsoft Azure req
 - **Subnet NSG Association (`azurerm_subnet_network_security_group_association`)**: Direct binding ensuring all subnet traffic traverses NSG evaluation.
 - **Public IP (`azurerm_public_ip`)**: Standard SKU static IPv4 resource.
 - **Network Interface (`azurerm_network_interface`)**: Primary NIC bound to the public subnet and static public IP.
+- **TLS Private Key (`tls_private_key`)**: Automated generation of 4096-bit RSA SSH keypair.
+- **Azure Linux VM (`azurerm_linux_virtual_machine`)**: Hardened Ubuntu 22.04 LTS instance bootstrapped with Docker, UFW, and Fail2Ban via Cloud-Init.
 
 ---
 
@@ -27,6 +29,9 @@ This module provisions the baseline networking foundation on Microsoft Azure req
 | `subnet_cidr` | `string` | `"10.0.1.0/24"` | CIDR range for Public Subnet. |
 | `vm_size` | `string` | `"Standard_B2s"` | Virtual Machine instance SKU. |
 | `admin_username` | `string` | `"azureuser"` | Linux administrative SSH username. |
+| `os_disk_type` | `string` | `"StandardSSD_LRS"` | Storage tier for managed OS disk. |
+| `os_disk_size_gb` | `number` | `30` | Size of OS disk in Gigabytes. |
+| `os_disk_caching` | `string` | `"ReadWrite"` | Disk caching policy (`None`, `ReadOnly`, `ReadWrite`). |
 | `tags` | `map(string)` | *(see `variables.tf`)* | Resource metadata tags. |
 
 ---
@@ -59,4 +64,18 @@ terraform plan -var-file="terraform.tfvars.example" -out=tfplan
 ### 5. Apply
 ```bash
 terraform apply tfplan
+```
+
+### 6. Connect to Provisioned VM
+Using the automated helper scripts:
+```bash
+# Bash
+./scripts/connect-vm.sh
+
+# PowerShell
+.\scripts\connect-vm.ps1
+```
+Or directly via SSH:
+```bash
+ssh -i terraform/id_rsa_cloudapp-prod.pem azureuser@<PUBLIC_IP>
 ```

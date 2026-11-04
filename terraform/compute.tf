@@ -18,8 +18,9 @@ resource "azurerm_linux_virtual_machine" "main" {
 
   os_disk {
     name                 = "osdisk-${local.naming_prefix}"
-    caching              = "ReadWrite"
-    storage_account_type = "StandardSSD_LRS"
+    caching              = var.os_disk_caching
+    storage_account_type = var.os_disk_type
+    disk_size_gb         = var.os_disk_size_gb
   }
 
   source_image_reference {

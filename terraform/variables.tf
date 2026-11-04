@@ -50,6 +50,39 @@ variable "admin_username" {
   default     = "azureuser"
 }
 
+variable "os_disk_type" {
+  description = "Storage tier for the OS managed disk"
+  type        = string
+  default     = "StandardSSD_LRS"
+
+  validation {
+    condition     = contains(["Standard_LRS", "StandardSSD_LRS", "Premium_LRS"], var.os_disk_type)
+    error_message = "OS disk type must be Standard_LRS, StandardSSD_LRS, or Premium_LRS."
+  }
+}
+
+variable "os_disk_size_gb" {
+  description = "Size of the OS disk in Gigabytes"
+  type        = number
+  default     = 30
+
+  validation {
+    condition     = var.os_disk_size_gb >= 30
+    error_message = "OS disk size must be at least 30 GB."
+  }
+}
+
+variable "os_disk_caching" {
+  description = "Disk caching policy for OS disk (None, ReadOnly, ReadWrite)"
+  type        = string
+  default     = "ReadWrite"
+
+  validation {
+    condition     = contains(["None", "ReadOnly", "ReadWrite"], var.os_disk_caching)
+    error_message = "OS disk caching must be None, ReadOnly, or ReadWrite."
+  }
+}
+
 variable "tags" {
   description = "A mapping of tags to assign to all resources"
   type        = map(string)

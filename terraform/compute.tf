@@ -30,5 +30,9 @@ resource "azurerm_linux_virtual_machine" "main" {
     version   = "latest"
   }
 
+  custom_data = base64encode(templatefile("${path.module}/scripts/cloud-init.yaml", {
+    admin_username = var.admin_username
+  }))
+
   tags = local.common_tags
 }

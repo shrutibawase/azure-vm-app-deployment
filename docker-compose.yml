@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: cloudapp-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-clouduser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-SecurePass123!}
+      POSTGRES_DB: ${POSTGRES_DB:-cloudappdb}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-clouduser} -d ${POSTGRES_DB:-cloudappdb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - app-network
+
+  api:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    container_name: cloudapp-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://clouduser:SecurePass123!@db:5432/cloudappdb}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      DEBUG: ${DEBUG:-false}
+      PORT: 8000
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - app-network
+
+volumes:
+  postgres_data:
+    name: cloudapp_postgres_data
+
+networks:
+  app-network:
+    name: cloudapp_network
+    driver: bridge

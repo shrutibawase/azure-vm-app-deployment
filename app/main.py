@@ -4,6 +4,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
+from app.database import engine, Base
+from app.routes import router as api_router
 
 START_TIME = time.time()
 
@@ -12,6 +14,12 @@ START_TIME = time.time()
 async def lifespan(app: FastAPI):
     """Application startup and shutdown events."""
     print(f"🚀 Starting {settings.APP_NAME} v{settings.APP_VERSION} [{settings.ENVIRONMENT}]")
+    try:
+        # Create database tables if database is reachable
+        Base.metadata.create_all(bind=engine)
+        print("✅ Database schema initialized successfully.")
+    except Exception as exc:
+        print(f"⚠️ Notice: Database initialization deferred (will connect on demand): {exc}")
     yield
     print(f"🛑 Shutting down {settings.APP_NAME}")
 
@@ -34,6 +42,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Register API Router
+app.include_router(api_router)
 
 
 @app.get("/", tags=["Root"])

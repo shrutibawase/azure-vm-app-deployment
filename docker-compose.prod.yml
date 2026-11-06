@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: cloudapp-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-clouduser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-SecurePass123!}
+      POSTGRES_DB: ${POSTGRES_DB:-cloudappdb}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-clouduser} -d ${POSTGRES_DB:-cloudappdb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - app-network
+
+  api:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    container_name: cloudapp-api
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-clouduser}:${POSTGRES_PASSWORD:-SecurePass123!}@db:5432/${POSTGRES_DB:-cloudappdb}
+      ENVIRONMENT: production
+      DEBUG: "false"
+      PORT: 8000
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - app-network
+
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: cloudapp-nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/snippets:/etc/nginx/snippets:ro
+      - certbot_www:/var/www/certbot:ro
+      - certbot_conf:/etc/letsencrypt:ro
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  certbot:
+    image: certbot/certbot:latest
+    container_name: cloudapp-certbot
+    restart: unless-stopped
+    volumes:
+      - certbot_www:/var/www/certbot:rw
+      - certbot_conf:/etc/letsencrypt:rw
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    networks:
+      - app-network
+
+volumes:
+  postgres_data:
+    name: cloudapp_postgres_prod_data
+  certbot_www:
+    name: cloudapp_certbot_www
+  certbot_conf:
+    name: cloudapp_certbot_conf
+
+networks:
+  app-network:
+    name: cloudapp_prod_network
+    driver: bridge

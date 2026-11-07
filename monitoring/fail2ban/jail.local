@@ -1,0 +1,20 @@
+# ==============================================================================
+# Fail2Ban Security Jail Configuration for Azure Linux Host
+# ==============================================================================
+
+[DEFAULT]
+bantime  = 24h
+findtime = 15m
+maxretry = 3
+backend  = systemd
+usedns   = warn
+ignoreip = 127.0.0.1/8 ::1 10.0.0.0/16
+
+[sshd]
+enabled  = true
+port     = 22
+mode     = aggressive
+filter   = sshd
+maxretry = 3
+bantime  = 24h
+action   = %(action_mwl)s

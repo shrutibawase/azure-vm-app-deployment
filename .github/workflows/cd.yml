@@ -46,7 +46,23 @@ jobs:
         env:
           VM_USER: ${{ secrets.AZURE_VM_USER || 'azureuser' }}
           VM_HOST: ${{ secrets.AZURE_VM_HOST }}
-          IMAGE_TAG: latest
         run: |
           echo "🚀 Executing deployment script on remote VM..."
           ssh "$VM_USER@$VM_HOST" "cd ~/azure-vm-app-deployment && chmod +x scripts/*.sh && ./scripts/deploy.sh"
+
+      - name: Post-Deployment Smoke Test
+        env:
+          VM_HOST: ${{ secrets.AZURE_VM_HOST }}
+        run: |
+          echo "🔬 Running smoke tests against http://$VM_HOST..."
+          chmod +x scripts/smoke-test.sh
+          ./scripts/smoke-test.sh "http://$VM_HOST"
+
+      - name: Rollback on Smoke Test Failure
+        if: failure()
+        env:
+          VM_USER: ${{ secrets.AZURE_VM_USER || 'azureuser' }}
+          VM_HOST: ${{ secrets.AZURE_VM_HOST }}
+        run: |
+          echo "⚠️ Deployment failed verification! Triggering automated rollback..."
+          ssh "$VM_USER@$VM_HOST" "cd ~/azure-vm-app-deployment && docker compose -f docker-compose.prod.yml restart"

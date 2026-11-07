@@ -1,0 +1,52 @@
+name: Continuous Deployment (CD) to Azure VM
+
+on:
+  workflow_run:
+    workflows: ["Build & Publish Container Image"]
+    branches: [main]
+    types: [completed]
+  workflow_dispatch:
+
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to Azure Linux VM
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Configure SSH Key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.AZURE_VM_SSH_KEY }}
+
+      - name: Scan Host Keys (known_hosts)
+        env:
+          VM_HOST: ${{ secrets.AZURE_VM_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "$VM_HOST" >> ~/.ssh/known_hosts
+
+      - name: Synchronize Configuration Files to Remote VM
+        env:
+          VM_USER: ${{ secrets.AZURE_VM_USER || 'azureuser' }}
+          VM_HOST: ${{ secrets.AZURE_VM_HOST }}
+        run: |
+          echo "📦 Copying deployment manifests to $VM_USER@$VM_HOST..."
+          ssh "$VM_USER@$VM_HOST" "mkdir -p ~/azure-vm-app-deployment"
+          scp -r docker-compose.prod.yml nginx/ scripts/ "$VM_USER@$VM_HOST:~/azure-vm-app-deployment/"
+
+      - name: Execute Zero-Downtime Deployment
+        env:
+          VM_USER: ${{ secrets.AZURE_VM_USER || 'azureuser' }}
+          VM_HOST: ${{ secrets.AZURE_VM_HOST }}
+          IMAGE_TAG: latest
+        run: |
+          echo "🚀 Executing deployment script on remote VM..."
+          ssh "$VM_USER@$VM_HOST" "cd ~/azure-vm-app-deployment && chmod +x scripts/*.sh && ./scripts/deploy.sh"

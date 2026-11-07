@@ -38,9 +38,30 @@ services:
       - monitoring-network
       - app-network
 
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: cloudapp-grafana
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=AdminSecurePass123!
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - monitoring-network
+
 volumes:
   prometheus_data:
     name: cloudapp_prometheus_data
+  grafana_data:
+    name: cloudapp_grafana_data
 
 networks:
   monitoring-network:

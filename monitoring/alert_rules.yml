@@ -1,0 +1,48 @@
+# ==============================================================================
+# Prometheus Alerting Rules & Thresholds
+# ==============================================================================
+
+groups:
+  - name: host_infrastructure_alerts
+    rules:
+      # Alert: High CPU utilization
+      - alert: HostHighCpuLoad
+        expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Host high CPU usage on {{ $labels.instance }}"
+          description: "CPU load exceeds 85% for more than 5 minutes (current value: {{ $value }}%)."
+
+      # Alert: Low Available Memory
+      - alert: HostLowAvailableMemory
+        expr: (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes * 100) < 15
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Host low available memory on {{ $labels.instance }}"
+          description: "Available physical memory has dropped below 15% (current value: {{ $value }}%)."
+
+      # Alert: Low Disk Space on Root Filesystem
+      - alert: HostDiskSpaceFillingUp
+        expr: (node_filesystem_free_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} * 100) < 15
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Host root partition disk space critical on {{ $labels.instance }}"
+          description: "Root partition has less than 15% free space remaining (current: {{ $value }}%)."
+
+  - name: application_health_alerts
+    rules:
+      # Alert: Application Unreachable
+      - alert: ApiServiceDown
+        expr: up{job="fastapi-app"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "API Service is unreachable"
+          description: "The CloudApp FastAPI backend is down or not responding to probes for 1 minute."

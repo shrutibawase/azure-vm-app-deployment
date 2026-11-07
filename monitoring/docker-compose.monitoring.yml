@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  node-exporter:
+    image: prom/node-exporter:v1.7.0
+    container_name: cloudapp-node-exporter
+    restart: unless-stopped
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    ports:
+      - "127.0.0.1:9100:9100"
+    networks:
+      - monitoring-network
+
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: cloudapp-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    networks:
+      - monitoring-network
+      - app-network
+
+volumes:
+  prometheus_data:
+    name: cloudapp_prometheus_data
+
+networks:
+  monitoring-network:
+    name: cloudapp_monitoring_network
+    driver: bridge
+  app-network:
+    external: true
+    name: cloudapp_prod_network
